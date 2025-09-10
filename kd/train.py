@@ -1,5 +1,6 @@
 import argparse, os, time
 import torch
+import json, signal, pathlib
 from torch.utils.data import DataLoader
 from accelerate import Accelerator
 from transformers import get_cosine_schedule_with_warmup
@@ -39,7 +40,48 @@ def parse_args():
     ### LoRA Setting Arguments
     ap.add_argument('--lora.r', dest='lora_r', type=int, default=16)
     ap.add_argument('--lora.alpha', dest='lora_alpha', type=int, default=32)
+
+    ### Checkpoint Arguments
+    ap.add_argument('--save-dir', type=str, required=True, help='Root directory to run + checkpoints')
+    ap.add_argument('--save_every', type=int, default=0, help='Steps between checkpoints (0=off)')
+    ap.add_argument('--resume', type=str, default='auto', choices=['auto', 'none', 'path'], help='Resume Policy')
+    ap.add_argument('--resume_path', type=str, default='', help='Directory of a specific checkpoint when --resume=path')
     return ap.parse_args()
+
+def _latest_ckpt(root: str):
+    p = pathlib.Path(root)
+    if not p.exists(): return None
+    cks = sorted(p.glob("ckpt_step*"), key=lambda x: x.name)
+    return str(cks[-1]) if cks else None
+
+def _save_ckpt(step, model, tok, optimizer, scheduler, save_dir):
+    ck = pathlib.Path(save_dir) / f"ckpt_step{step:07d}"
+    ck.mkdir(parents=True, exist_ok=True)
+    model.save_pretrained(ck.as_posix())
+    tok.save_pretrained(ck.as_posix())
+    # save optimizer/scheduler/step
+    state = {
+        "step": step,
+        "optimizer": optimizer.state_dict(),
+        "scheduler": scheduler.state_dict(),
+    }
+    torch.save(state, ck / "trainer_state.pt")
+
+def _load_ckpt(path, model, tok, optimizer, scheduler, accelerator):
+    # PEFT adapters + tokenizer
+    from transformers import AutoTokenizer, AutoModelForCausalLM
+    # We only need to load weights into the same initialized model
+    model.load_adapter(path) if hasattr(model, "load_adapter") else model.from_pretrained(path)  # best-effort
+    tok_init = AutoTokenizer.from_pretrained(path, use_fast=True)
+    if tok.pad_token_id is not None:
+        tok.pad_token = tok_init.pad_token
+    # optimizer/scheduler
+    st = torch.load(pathlib.Path(path) / "trainer_state.pt", map_location="cpu")
+    optimizer.load_state_dict(st["optimizer"])
+    scheduler.load_state_dict(st["scheduler"])
+    return int(st.get("step", 0))
+
+
 
 def main():
     args = parse_args()
@@ -50,6 +92,33 @@ def main():
     model = accelerator.prepare(model)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr)
     scheduler = get_cosine_schedule_with_warmup(optimizer, args.warmup_steps, args.max_steps)
+
+    # ---- [Checkpoint] resume detection ----
+    save_dir = args.save_dir
+    pathlib.Path(save_dir).mkdir(parents=True, exist_ok=True)
+
+    step = 0
+    def handle_sigusr1(signum, frame):
+        # save an immediate checkpoint with current step
+        try:
+            _save_ckpt(step, model, tok, optimizer, scheduler, save_dir)
+            print(f"[SIGNAL] Saved checkpoint at step={step} due to SIGUSR1")
+        finally:
+            pass
+    signal.signal(signal.SIGUSR1, handle_sigusr1)
+
+    # Auto-resume
+    if args.resume == 'auto':
+        lp = _latest_ckpt(save_dir)
+        if lp:
+            step = _load_ckpt(lp, model, tok, optimizer, scheduler, accelerator)
+            print(f"[RESUME] Resumed from {lp} at step={step}")
+    elif args.resume == 'path' and args.resume_path:
+        step = _load_ckpt(args.resume_path, model, tok, optimizer, scheduler, accelerator)
+        print(f"[RESUME] Resumed from {args.resume_path} at step={step}")
+    else:
+        print("[RESUME] Starting fresh")
+
 
     if args.kd_mode == 'rb':
         dataset = RBTopKIterableDataset(args.data)
@@ -114,6 +183,12 @@ def main():
             accelerator.backward(loss)
             optimizer.step()
             scheduler.step()
+
+            # periodic save
+            if accelerator.is_main_process and args.save_every > 0 and step % args.save_every == 0 and step > 0:
+                _save_ckpt(step, model, tok, optimizer, scheduler, save_dir)
+                print(f"[ckpt] Saved {save_dir}/ckpt_step{step:07d}")
+
 
             total_tokens += token_this
             step += 1
