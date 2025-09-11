@@ -70,14 +70,14 @@ def main():
             if len(rows) >= shard_size:
                 table = pa.Table.from_pylist(rows)
                 out_path = os.path.join(args.out_dir, f'rb_topk_{shard_idx:06d}.parquet')
-                pq.write_table(table, out_path, comptession='zstd')
+                pq.write_table(table, out_path, compression='zstd')
                 print('Wrote', out_path)
                 rows, shard_idx = [], shard_idx+1
 
     if rows:
         table = pa.Table.from_pylist(rows)
         out_path = os.path.join(args.out_dir, f'rb_topk_{shard_idx:06d}.parquet')
-        pq.write_table(table, out_path, comptession='zstd')
+        pq.write_table(table, out_path, compression='zstd')
         print('Wrote', out_path)
 
 if __name__ == "__main__":
