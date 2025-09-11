@@ -1,5 +1,17 @@
-#!/usr/bin/env
+#!/usr/bin/env bash
+#SBATCH --job-name=kd_build_caches
+#SBATCH --nodes=1
+#SBATCH --gpus-per-node=4
+#SBATCH --partition=h100
+#SBATCH --time=48:00:00
+#SBATCH --exclusive
+#SBATCH --signal=B:SIGUSR1@300
+#SBATCH --requeue
+#SBATCH --output=logs/%x_%j.out
+#SBATCH --error=logs/%x_%j.err
+
 set -euo pipefail
+source scripts/_env_single_node.sh
 
 IN=${IN:-data/shards.jsonl}
 TEACHER=${TEACHER:-meta-llama/Llama-3.1-70B-Instruct}
@@ -24,6 +36,4 @@ python teacher_farm/make_embed_cache.py \      #----|
     --input_jsonl "$IN" \                      #    ===== RELB pooled embs
     --out_dir data/relb_embeds/                #----|
 
-
-
-## TODO: Insert the system needs for slurm.
+echo "[INFO] Cache build complete"
