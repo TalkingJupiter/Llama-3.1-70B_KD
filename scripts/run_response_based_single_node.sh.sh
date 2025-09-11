@@ -17,7 +17,7 @@ echo "[INFO] Response-Based KD | node=1 | gpus=$GPUS_PER_NODE | procs=$NUM_PROCE
 
 # Node-local telemetry
 mkdir -p logs/telemetry/$SLURM_JOB_ID
-python monitor.py --output logs/telemetry/$SLURM_JOB_ID/${HOSTNAME}.jsonl --interval 5 &
+python monitor.py --output logs/telemetry/$SLURM_JOB_ID/${HOSTNAME}.jsonl --interval 1 &
 MON_PID=$!
 
 RUN_DIR="serialization_dir/$(date +%Y%m%d_%H%M)_RB_1n"
