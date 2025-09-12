@@ -33,6 +33,14 @@ mkdir -p data/topk_k16 data/fb_hints_L22 data/relb_embeds
 python teacher_farm/make_topk_cache.py \
   --model "$TEACHER" \
   --input_jsonl "$IN" \
+  --out_dir data/topk_k16/ \
+  --k 16 \
+  --dtype float16
+
+# ---- FB hidden-state caches (e.g., teacher layer 22)
+python teacher_farm/make_hidden_cache.py \
+  --model "$TEACHER" \
+  --input_jsonl "$IN" \
   --out_dir data/fb_hints_L22/ \
   --layers 22 \
   --batch_size 1 \
@@ -40,12 +48,6 @@ python teacher_farm/make_topk_cache.py \
   --dtype bfloat16 \
   --flush_every 256
 
-# ---- FB hidden-state caches (e.g., teacher layer 22)
-python teacher_farm/make_hidden_cache.py \
-  --model "$TEACHER" \
-  --input_jsonl "$IN" \
-  --out_dir data/fb_hints_L22/ \
-  --layers 22
 
 # ---- RelB pooled embedding caches
 python teacher_farm/make_embed_cache.py \
