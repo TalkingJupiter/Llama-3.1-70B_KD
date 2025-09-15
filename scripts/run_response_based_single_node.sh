@@ -26,7 +26,7 @@ mkdir -p "$RUN_DIR"
 accelerate launch \
   --num_machines 1 \
   --num_processes ${NUM_PROCESSES} \
-  --deepspeed configs/ds_zero3.json \
+  --deepspeed_config_file configs/ds_zero3.json \
   kd/train.py \
     --kd.mode rb \
     --student meta-llama/Llama-3.1-8B \
