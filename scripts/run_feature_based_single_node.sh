@@ -26,9 +26,9 @@ accelerate launch \
   --num_machines 1 \
   --num_processes ${NUM_PROCESSES} \
   --deepspeed_config_file configs/ds_zero3.json \
-  kd/train.py \
+  --module kd.train \
     --kd.mode fb \
-    --student Qwen2.5-1.5B-Instruct \
+    --student Qwen/Qwen2.5-1.5B-Instruct \
     --data "data/fb_hints_L22/*.parquet" \
     --fb.teacher_layer 22 \
     --fb.student_layer 12 \
@@ -36,11 +36,11 @@ accelerate launch \
     --lora.r 16 \
     --lora.alpha 32 \
     --lr 1e-4 \
-    --batch_size 2 \
+    --bash_size 2 \
     --max_steps 2000 \
-    --save_dir "$RUN_DIR" \
+    --save-dir "$RUN_DIR" \
     --save_every 200 \
-    --resume auto
+    --resume auto 
 
 kill $MON_PID || true
 echo "[INFO] FB KD complete"

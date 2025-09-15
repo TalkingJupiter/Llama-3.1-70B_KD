@@ -26,20 +26,20 @@ accelerate launch \
   --num_machines 1 \
   --num_processes ${NUM_PROCESSES} \
   --deepspeed_config_file configs/ds_zero3.json \
-  kd/train.py \
+  --module kd.train \
     --kd.mode relb \
-    --student Qwen2.5-1.5B-Instruct \
+    --student Qwen/Qwen2.5-1.5B-Instruct \
     --data "data/relb_embeds/*.parquet" \
     --relb.lambda_dist 1.0 \
     --relb.lambda_angle 0.5 \
     --lora.r 16 \
     --lora.alpha 32 \
     --lr 1e-4 \
-    --batch_size 4 \
+    --bash_size 4 \
     --max_steps 2000 \
-    --save_dir "$RUN_DIR" \
+    --save-dir "$RUN_DIR" \
     --save_every 200 \
-    --resume auto
+    --resume auto 
 
 kill $MON_PID || true
 echo "[INFO] RelB KD complete"
