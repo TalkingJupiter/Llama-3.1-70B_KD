@@ -1,18 +1,27 @@
 import torch
-import torch.nn.functional as F 
+import torch.nn.functional as F
 
-def _pairwise_dist(x):
-    return torch.cdist(x, x, p=2)
+def _pairwise_dist(x: torch.Tensor) -> torch.Tensor:
+    # upcast to fp32 so cdist works on CUDA
+    x32 = x.float()
+    return torch.cdist(x32, x32, p=2)  # (B, B)
 
-def _angle_matix(x):
-    diff = x.unsqueeze(1) - x.unsqueeze(0)
-    norms = torch.norm(diff, dim=-1, keepdim=True) + 1e-8
-    unit = diff / norms
-    return torch.matmul(unit, unit.transpose(-1, -2))
+def _angle_matrix(x: torch.Tensor) -> torch.Tensor:
+    # cosine-similarity Gram matrix (B, B)
+    x32 = F.normalize(x.float(), dim=-1)
+    return x32 @ x32.t()
 
-def relation_kd_loss(student_embs, teacher_embs, lambada_dist: float=1.0, lambada_angle: float = 0.5):
-    t = F.normalize(teacher_embs, dim=-1)
-    s = F.normalize(student_embs, dim=-1)
-    dist_loss = F.mse_loss(_pairwise_dist(s), _pairwise_dist(t))
-    angle_loss = F.mse_loss(_angle_matix(s), _angle_matix(t))
-    return lambada_dist * dist_loss * lambada_angle * angle_loss
+def relation_kd_loss(
+    student_embs: torch.Tensor,
+    teacher_embs: torch.Tensor,
+    lambda_dist: float = 1.0,
+    lambda_angle: float = 0.5,
+) -> torch.Tensor:
+    # normalize for angle term only; keep originals for distances
+    s = student_embs
+    t = teacher_embs
+
+    dist_loss  = F.mse_loss(_pairwise_dist(s), _pairwise_dist(t))
+    angle_loss = F.mse_loss(_angle_matrix(s), _angle_matrix(t))
+
+    return lambda_dist * dist_loss + lambda_angle * angle_loss
