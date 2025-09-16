@@ -12,7 +12,7 @@ MODEL_DIR=${MODEL_DIR:?Set with --export=MODEL_DIR=/path/to/run}
 source scripts/_env_single_node.sh
 
 echo "[INFO] LightEval on ${MODEL_DIR}"
-bash eval/lighteval_runner.sh "${MODEL_DIR}"
+sbatch eval/lighteval_runner.sh "${MODEL_DIR}"
 
 python eval/parse_results.py
 echo "[INFO] Wrote results/eval_summary.csv"
