@@ -33,6 +33,4 @@ packaging
 #Plotting
 numpy
 pandas
-matplotlibnumpy
-pandas
 matplotlib
