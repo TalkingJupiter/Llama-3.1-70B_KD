@@ -18,7 +18,7 @@ cd "${SLURM_SUBMIT_DIR:-$PWD}"
 
 # Activate your plotting environment (adjust to your setup)
 source ~/.bashrc
-conda activate base   # or whichever env has numpy/pandas/matplotlib
+conda activate kd   # or whichever env has numpy/pandas/matplotlib
 
 # -------------------------
 # Input / output paths
