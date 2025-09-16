@@ -29,3 +29,10 @@ lm-eval==0.4.*
 # Build/runtime helpers
 ninja
 packaging
+
+#Plotting
+numpy
+pandas
+matplotlibnumpy
+pandas
+matplotlib
