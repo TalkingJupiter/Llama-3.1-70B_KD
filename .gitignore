@@ -3,9 +3,10 @@ logs/
 machinefile*
 shards.jsonl
 serialization_dir/
-results/
+results/*.json
 fb_hints_L22/
 relb_embeds/
 topk_k16/
 __pycache__/
 plots/
+out/
