@@ -9,6 +9,7 @@
 #SBATCH --requeue
 #SBATCH --output=logs/%x_%j.out
 #SBATCH --error=logs/%x_%j.err
+#SBATCH --array=0-3
 
 set -euo pipefail
 source scripts/_env_single_node.sh
@@ -17,10 +18,10 @@ echo "[INFO] Response-Based KD | node=1 | gpus=$GPUS_PER_NODE | procs=$NUM_PROCE
 
 # Node-local telemetry
 mkdir -p logs/telemetry/$SLURM_JOB_ID
-python monitor.py --output logs/telemetry/$SLURM_JOB_ID/${HOSTNAME}.jsonl --interval 1 &
+python monitor.py --output logs/telemetry/response/$SLURM_JOB_ID/${HOSTNAME}.jsonl --interval 1 &
 MON_PID=$!
 
-RUN_DIR="serialization_dir/$(date +%Y%m%d_%H%M)_RB_1n"
+RUN_DIR="serialization_dir/response/$(date +%Y%m%d_%H%M)_RB_1n"
 mkdir -p "$RUN_DIR"
 
 accelerate launch \
